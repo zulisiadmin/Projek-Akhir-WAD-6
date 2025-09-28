@@ -18,7 +18,14 @@ export default function RegisterSeller() {
     try {
       setMsg(null); setErrors(null);
       await authApi.get('/sanctum/csrf-cookie');         // GET cookie
-      await authApi.post('/api/register', { ...f, as_seller: true }); // POST!
+      await authApi.post('/api/register', {
+        name: f.name,
+        email: f.email,
+        password: f.password,
+        password_confirmation: f.password_confirmation,
+        as_seller: true,                // ⬅️ ini wajib ada
+        vendor_name: f.vendor_name,     // ⬅️ nama toko
+      });
       nav('/seller');
     } catch (e: any) {
       const data = e?.response?.data;

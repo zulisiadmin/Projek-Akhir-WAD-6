@@ -25,6 +25,14 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/seller/products', [ProductController::class, 'store']);
     Route::put('/seller/products/{id}', [ProductController::class, 'update']);
     Route::delete('/seller/products/{id}', [ProductController::class, 'destroy']);
+
+    // opsional kalau mau dipakai di FE
+    Route::get('/me', fn(\Illuminate\Http\Request $r) => $r->user());
 });
 
-require __DIR__.'/auth.php'; // <-- pastikan baris ini ada
+Route::middleware('auth:sanctum')->get('/user', function (Illuminate\Http\Request $r) {
+    return $r->user();
+});
+
+// penting: route auth breeze (api/login, api/register, dll)
+require __DIR__.'/auth.php';
