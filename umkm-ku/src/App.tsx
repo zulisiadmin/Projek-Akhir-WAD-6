@@ -1,8 +1,10 @@
-import {BrowserRouter, Routes, Route} from 'react-router-dom'
+import {Routes, Route} from 'react-router-dom'
 import './App.css'
 import Register from './pages/Register'
 import Login from './pages/Login'
-import HomeSection from './pages/HomeSection'
+import HomePage from './pages/HomePage'
+import About from './pages/About'
+import Layout from './layout/Layout'
 
 
 function App() {
@@ -10,19 +12,18 @@ function App() {
 
   return (
     <>
-    <BrowserRouter>
-    <Routes>
-      <Route path='/register' element={<Register />} />
-    </Routes>
-
-    <Routes>
-      <Route path='/login' element={<Login />} />
-    </Routes>
-
+    <div className="App container-fluid p-0 m-0">
       <Routes>
-        <Route path='/' element={<HomeSection />} />
+        <Route path='/register' element= {<Register />} />
+        <Route path='/login' element= {<Login />} />
       </Routes>
-      </BrowserRouter>
+      <Routes>
+        <Route path='/' element= {<Layout />}>
+          <Route index element={<HomePage />} />
+          <Route path="/about" element={<About />} />
+       </Route>
+      </Routes>
+    </div>
     </>
   )
 }
