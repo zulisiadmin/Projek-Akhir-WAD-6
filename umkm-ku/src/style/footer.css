@@ -1,0 +1,4 @@
+.custom-input::placeholder {
+  color: #fff;   /* warna kuning */
+  opacity: 1;       /* biar nggak transparan */
+}
