@@ -4,18 +4,18 @@ const FeatureSection: React.FC = () => {
   const features = [
     {
       icon: "bi-truck",
-      title: "FREE AND FAST DELIVERY",
-      desc: "Free delivery for all orders over $140",
+      title: "PENGIRIMAN GRATIS DAN CEPAT",
+      desc: "Pengiriman gratis untuk semua pesanan di atas Rp. 200.000",
     },
     {
       icon: "bi-headset",
-      title: "24/7 CUSTOMER SERVICE",
-      desc: "Friendly 24/7 customer support",
+      title: "LAYANAN PELANGGAN 24/7",
+      desc: "Layanan pelanggan ramah 24/7",
     },
     {
       icon: "bi-shield-check",
-      title: "MONEY BACK GUARANTEE",
-      desc: "We return money within 30 days",
+      title: "JAMINAN UANG KEMBALI",
+      desc: "Kami mengembalikan uang dalam 30 hari jika ada masalah",
     },
   ];
 

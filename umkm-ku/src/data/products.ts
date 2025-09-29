@@ -50,4 +50,24 @@ export const products: Product[] = [
     rating: 4.6,
     reviews: 95,
   },
+  {
+    id: 5,
+    name: "AK-900 Wired Keyboard",
+    image: "/images/isi2.png",
+    discount: 70,
+    price: 96000,
+    oldPrice: 150000, // semula 1.500.000 terlalu jauh dibanding price
+    rating: 4.3,
+    reviews: 75,
+  },
+  {
+    id: 4,
+    name: "S-Series Comfort Chair",
+    image: "/images/isi4.jpg",
+    discount: 25,
+    price: 375000,
+    oldPrice: 400000,
+    rating: 4.6,
+    reviews: 95,
+  },
 ];

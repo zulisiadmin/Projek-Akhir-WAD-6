@@ -3,7 +3,7 @@ import { Link } from "react-router-dom";
 
 const Navbar: React.FC = () => {
   return (
-    <nav className="navbar navbar-expand-lg navbar-light bg-light">
+    <nav className="navbar navbar-expand-lg navbar-light bg-light py-3 shadow-sm">
       <div className="container">
         <a className="navbar-brand fw-bold" href="#">
           UMKM KU
@@ -33,13 +33,8 @@ const Navbar: React.FC = () => {
               </Link>
             </li>
             <li className="nav-item">
-              <Link className="nav-link" to="#">
+              <Link className="nav-link" to="contact">
                 Kontak
-              </Link>
-            </li>
-            <li className="nav-item">
-              <Link className="nav-link" to="#">
-                Sign Up
               </Link>
             </li>
           </ul>
@@ -49,7 +44,7 @@ const Navbar: React.FC = () => {
             <input
               className="form-control me-2 rounded-pill ps-3 pe-5"
               type="search"
-              placeholder="Search"
+              placeholder="Cari Produk..."
               aria-label="Search"
             />
             <span className="border-0 bg-transparent position-absolute top-50 end-0 translate-middle-y me-4">
@@ -62,14 +57,18 @@ const Navbar: React.FC = () => {
             <Link className="text-dark me-2" to="#">
               <i className="bi bi-heart fw-bold fs-4"></i>
             </Link>
-            <button className="text-dark border-0 bg-transparent" type="button">
+            <Link className="text-dark border-0 bg-transparent" to="cart">
               <i className="bi bi-cart fw-bold fs-4"></i>
-            </button>
+            </Link>
           </div>
 
           {/* Login Button */}
           <Link className="btn btn-danger ms-3" to="/login" role="button">
-            Login
+           Masuk
+          </Link>
+
+          <Link className="btn btn-danger ms-3 rounded-circle" to="account" role="button">
+            <i className="bi bi-person-fill"></i>
           </Link>
         </div>
       </div>

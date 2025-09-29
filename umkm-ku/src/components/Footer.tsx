@@ -103,7 +103,7 @@ const Footer: React.FC = () => {
         </div>
 
         <hr className="bg-white" />
-        <p className="mb-0">© 2024 UMKM KU. All rights reserved.</p>
+        <p className="mb-0">© 2025 UMKM KU. All rights reserved.</p>
       </div>
     </footer>
   );
