@@ -1,0 +1,14 @@
+.not-found-screen {
+  text-align: center;
+  padding: 50px;
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+}
+
+.not-found-screen h1 {
+  font-size: 6rem;
+  margin-bottom: 20px;
+}
