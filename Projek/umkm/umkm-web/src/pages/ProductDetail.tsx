@@ -1,11 +1,11 @@
 // src/pages/ProductDetail.tsx
 import { useEffect, useMemo, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { publicApi } from '../services/api'
+import { publicApi } from '../services/api';
 
 type RouteParams = { id: string };
 
-// --- Types yang fleksibel dengan API kamu ---
+// --- Types fleksibel ---
 type ProductImage = { url: string; is_primary?: boolean; sort?: number };
 type ProductVariant = {
   id: number;
@@ -16,7 +16,7 @@ type ProductVariant = {
   is_default?: boolean;
   sort?: number;
 };
-type Category = { id: number; name: string; slug: string };
+type Category = { id: number; name: string; slug?: string };
 
 interface Product {
   id: number;
@@ -24,13 +24,15 @@ interface Product {
   title?: string;
   slug?: string;
   description?: string | null;
-  base_price?: number | null; // API kamu pakai base_price
-  price?: number | null;      // fallback jika nanti ada
+  base_price?: number | null;
+  price?: number | null;
   image_url?: string | null;
   images?: ProductImage[];
   variants?: ProductVariant[];
   categories?: Category[];
   stock?: number | null;
+  rating?: number;          // kalau ada
+  reviews_count?: number;   // kalau ada
   [key: string]: any;
 }
 
@@ -39,7 +41,10 @@ export default function ProductDetail() {
   const [loading, setLoading] = useState(true);
   const [error, setError]     = useState<string | null>(null);
   const [product, setProduct] = useState<Product | null>(null);
+
   const [selectedVariantId, setSelectedVariantId] = useState<number | null>(null);
+  const [thumbIndex, setThumbIndex] = useState(0);
+  const [qty, setQty] = useState(1);
 
   useEffect(() => {
     if (!id) {
@@ -47,25 +52,22 @@ export default function ProductDetail() {
       setError('ID/slug produk tidak ditemukan di URL.');
       return;
     }
-
     (async () => {
       try {
-        setLoading(true);
-        setError(null);
-
+        setLoading(true); setError(null);
         const res = await publicApi.get(`/api/products/${encodeURIComponent(id)}`);
-        // Laravel JsonResource bisa membungkus data di { data: {...} }
         const payload = res.data;
         const p: Product = payload?.data ?? payload;
-
         setProduct(p);
 
-        // Pilih varian default bila ada
+        // default variant (kalau ada)
         const def = (p.variants || []).find(v => v.is_default) ?? (p.variants || [])[0] ?? null;
         setSelectedVariantId(def ? def.id : null);
+
+        // default image index
+        setThumbIndex(0);
       } catch (e: any) {
-        if (e?.response?.status === 404) setError('Produk tidak ditemukan.');
-        else setError(e?.message || 'Gagal memuat detail produk.');
+        setError(e?.response?.status === 404 ? 'Produk tidak ditemukan.' : (e?.message || 'Gagal memuat detail produk.'));
       } finally {
         setLoading(false);
       }
@@ -77,176 +79,153 @@ export default function ProductDetail() {
     [product?.variants, selectedVariantId]
   );
 
-  const finalName = product?.name ?? product?.title ?? (product ? `Produk #${product.id}` : '-');
+  const title = product?.name ?? product?.title ?? (product ? `Produk #${product.id}` : '-');
 
-  // Harga = base_price (atau price) + price_delta varian
+  // Harga: base + delta varian
   const basePrice = product?.base_price ?? product?.price ?? 0;
   const finalPrice = basePrice + (selectedVariant?.price_delta ?? 0);
-  const fmtIDR = (n: number) =>
-    new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR' }).format(n);
+  const fmtIDR = (n: number) => new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR' }).format(n);
 
-  // Gambar utama: image_url atau gambar pertama di images[]
-  const mainImage =
-    product?.image_url ||
-    (product?.images && product.images.length > 0 ? product.images[0].url : null);
+  const images: string[] = (() => {
+    if (!product) return [];
+    // prioritaskan images[], kalau kosong pakai image_url tunggal
+    if (Array.isArray(product.images) && product.images.length) {
+      return product.images.map(i => i.url);
+    }
+    return product.image_url ? [product.image_url] : [];
+  })();
 
-  if (loading) return <div style={{ padding: 16 }}>Memuat data produk…</div>;
-  if (error)
-    return (
-      <div style={{ color: '#b91c1c', padding: 16 }}>
+  // thumbnails placeholder jika tidak ada gambar
+  const thumbsToShow = images.length ? images : Array.from({ length: 4 }, () => '');
+
+  const mainImage = images[thumbIndex] ?? null;
+
+  const decQty = () => setQty(q => Math.max(1, q - 1));
+  const incQty = () => setQty(q => q + 1);
+
+  if (loading) return <div className="pd"><div className="container">Memuat data produk…</div></div>;
+  if (error)   return (
+    <div className="pd">
+      <div className="container" style={{color:'#b91c1c'}}>
         Error: {error} <div style={{ marginTop: 8 }}><Link to="/">← Kembali</Link></div>
       </div>
-    );
-  if (!product) return <div style={{ padding: 16 }}>Tidak ada data. <Link to="/">← Kembali</Link></div>;
+    </div>
+  );
+  if (!product) return <div className="pd"><div className="container">Tidak ada data. <Link to="/">← Kembali</Link></div></div>;
 
   return (
-    <div style={{ maxWidth: 900, margin: '0 auto', padding: 16 }}>
-      <p style={{ marginBottom: 12 }}>
-        <Link to="/">← Kembali</Link>
-      </p>
-
-      <div style={{ display: 'grid', gridTemplateColumns: '320px 1fr', gap: 24 }}>
-        <div>
-          {mainImage ? (
-            <img
-              src={mainImage}
-              alt={finalName}
-              style={{ width: '100%', borderRadius: 8, display: 'block' }}
-            />
-          ) : (
-            <div
-              style={{
-                width: '100%',
-                aspectRatio: '1 / 1',
-                borderRadius: 8,
-                background: '#f3f4f6',
-                display: 'grid',
-                placeItems: 'center',
-                color: '#6b7280',
-              }}
-            >
-              Tidak ada gambar
-            </div>
-          )}
-
-          {/* Thumbnail kecil (jika ada) */}
-          {product.images && product.images.length > 1 && (
-            <div style={{ display: 'flex', gap: 8, marginTop: 8, flexWrap: 'wrap' }}>
-              {product.images.map((img, i) => (
-                <img
-                  key={i}
-                  src={img.url}
-                  alt={`thumb-${i}`}
-                  style={{
-                    width: 64,
-                    height: 64,
-                    objectFit: 'cover',
-                    borderRadius: 6,
-                    border: img.url === mainImage ? '2px solid #10b981' : '1px solid #e5e7eb',
-                  }}
-                  onClick={(e) => {
-                    e.preventDefault();
-                    // ganti mainImage dengan cara sederhana: set product.image_url
-                    setProduct(p => (p ? { ...p, image_url: img.url } : p));
-                  }}
-                />
-              ))}
-            </div>
-          )}
+    <div className="pd">
+      <div className="container">
+        {/* Breadcrumbs sederhana */}
+        <div className="pd-breadcrumb">
+          <Link to="/">Home</Link> / <span>{title}</span>
         </div>
 
-        <div>
-          <h1 style={{ margin: '0 0 8px' }}>{finalName}</h1>
+        <div className="pd-grid">
+          {/* Thumbs kiri */}
+          <div className="pd-thumbs">
+            {thumbsToShow.map((url, idx) => (
+              <button
+                key={idx}
+                className={`pd-thumb ${idx === thumbIndex ? 'active' : ''}`}
+                onClick={() => setThumbIndex(idx)}
+                aria-label={`Gambar ${idx + 1}`}
+              >
+                {url
+                  ? <img src={url} alt={`thumb-${idx}`} />
+                  : <div style={{width:'100%',height:'100%',display:'grid',placeItems:'center',color:'#94a3b8'}}>No<br/>Image</div>
+                }
+              </button>
+            ))}
+          </div>
 
-          {/* Kategori (jika ada) */}
-          {product.categories && product.categories.length > 0 && (
-            <div style={{ display: 'flex', gap: 8, marginBottom: 8, flexWrap: 'wrap' }}>
-              {product.categories.map((c) => (
-                <span
-                  key={c.id}
-                  style={{
-                    fontSize: 12,
-                    background: '#f1f5f9',
-                    padding: '4px 8px',
-                    borderRadius: 999,
-                  }}
-                >
-                  {c.name}
-                </span>
-              ))}
+          {/* Gambar besar */}
+          <div className="pd-mainimg">
+            {mainImage
+              ? <img src={mainImage} alt={title} />
+              : <div style={{color:'#94a3b8'}}>Tidak ada gambar</div>
+            }
+          </div>
+
+          {/* Info kanan */}
+          <div className="pd-info">
+            <h1 className="pd-title">{title}</h1>
+
+            <div className="pd-rating">
+              <span className="stars">
+                <i className="bi bi-star-fill" />
+                <i className="bi bi-star-fill" />
+                <i className="bi bi-star-fill" />
+                <i className="bi bi-star-half" />
+                <i className="bi bi-star" />
+              </span>
+              <span>({product.reviews_count ?? 150} Reviews)</span>
+              <span>•</span>
+              <span className="pd-stock">In Stock</span>
             </div>
-          )}
 
-          {/* Varian (jika ada) */}
-          {product.variants && product.variants.length > 0 && (
-            <div style={{ margin: '12px 0' }}>
-              <div style={{ fontWeight: 600, marginBottom: 6 }}>Pilih Varian</div>
-              <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-                {product.variants.map((v) => (
-                  <button
-                    key={v.id}
-                    onClick={() => setSelectedVariantId(v.id)}
-                    style={{
-                      padding: '6px 10px',
-                      borderRadius: 8,
-                      border: v.id === selectedVariantId ? '2px solid #10b981' : '1px solid #e5e7eb',
-                      background: v.id === selectedVariantId ? '#ecfdf5' : '#fff',
-                      cursor: 'pointer',
-                    }}
-                    title={
-                      v.price_delta
-                        ? `+ ${fmtIDR(v.price_delta)}`
-                        : undefined
-                    }
-                  >
-                    {v.name ?? 'Varian'}{v.price_delta ? ` (+${fmtIDR(v.price_delta)})` : ''}
-                  </button>
-                ))}
+            <div className="pd-price">{fmtIDR(finalPrice)}</div>
+
+            {/* Deskripsi singkat */}
+            {product.description && (
+              <p className="pd-desc">{product.description}</p>
+            )}
+            {/* Size dari variants (kalau ada) */}
+            {product.variants && product.variants.length > 0 && (
+              <div className="pd-opt">
+                <div className="label">Size:</div>
+                <div className="pd-sizes">
+                  {product.variants.map(v => (
+                    <button
+                      key={v.id}
+                      className={`pd-size ${v.id === selectedVariantId ? 'active' : ''}`}
+                      onClick={() => setSelectedVariantId(v.id)}
+                      title={v.price_delta ? `+${fmtIDR(v.price_delta)}` : undefined}
+                    >
+                      {v.name || 'Var'}{/* tampilkan nama varian */}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Qty & actions */}
+            <div className="pd-actions">
+              <div className="pd-qty">
+                <button className="pd-qtybtn" onClick={decQty} aria-label="Kurangi">
+                  <i className="bi bi-dash" />
+                </button>
+                <span className="pd-qtynum">{qty}</span>
+                <button className="pd-qtybtn" onClick={incQty} aria-label="Tambah">
+                  <i className="bi bi-plus" />
+                </button>
+              </div>
+
+              <button className="btn-buy" onClick={() => alert(`Beli ${qty} item`)}>
+                Buy Now
+              </button>
+
+              <button className="btn-like" aria-label="Wishlist">
+                <i className="bi bi-heart" />
+              </button>
+            </div>
+
+            {/* Info pengiriman */}
+            <div className="pd-features">
+              <div className="pd-feature">
+                <div className="pd-feature__row">
+                  <div className="ico"><i className="bi bi-truck" /></div>
+                  <div>
+                    <div className="title">Free Delivery</div>
+                    <div className="sub">Enter your postal code for Delivery Availability</div>
+                  </div>
+                </div>
               </div>
             </div>
-          )}
 
-          <div style={{ fontSize: 28, fontWeight: 700, margin: '12px 0' }}>
-            {fmtIDR(finalPrice)}
-          </div>
-
-          <dl
-            style={{
-              display: 'grid',
-              gridTemplateColumns: '120px 1fr',
-              gap: '6px 12px',
-              marginTop: 12,
-            }}
-          >
-            <dt>Stok</dt>
-            <dd>{product.stock ?? selectedVariant?.stock ?? '-'}</dd>
-            <dt>Deskripsi</dt>
-            <dd>{product.description ?? '-'}</dd>
-          </dl>
-
-          <div style={{ marginTop: 16 }}>
-            <button
-              type="button"
-              style={{
-                padding: '10px 14px',
-                borderRadius: 10,
-                border: 'none',
-                background: '#111827',
-                color: '#fff',
-                cursor: 'pointer',
-              }}
-              onClick={() => alert('Contoh: tambah ke keranjang')}
-            >
-              Tambah ke Keranjang
-            </button>
-          </div>
-        </div>
-      </div>
-
-      {/* Debug bentuk data dari API (aktifkan jika perlu) */}
-      {/* <pre style={{marginTop:16, background:'#111827', color:'#e5e7eb', padding:12, borderRadius:8}}>
-        {JSON.stringify(product, null, 2)}
-      </pre> */}
+          </div>{/* pd-info */}
+        </div>{/* pd-grid */}
+      </div>{/* container */}
     </div>
   );
 }

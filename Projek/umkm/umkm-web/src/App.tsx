@@ -1,22 +1,27 @@
 // App.tsx
 import { Routes, Route, Navigate } from 'react-router-dom';
+import AppLayout from './layouts/AppLayout';
 import Home from './pages/Home';
 import ProductDetail from './pages/ProductDetail';
 import Contact from './pages/Contact';
 import Login from './pages/auth/Login';
 import RegisterSeller from './pages/auth/RegisterSeller';
 import SellerDashboard from './pages/seller/Dashboard';
+import CategoryPage from './pages/CategoryPage';
 import './App.css';
 
 export default function App() {
   return (
     <Routes>
       {/* PUBLIC */}
-      <Route path="/" element={<Home />} />
-      <Route path="/products/:id" element={<ProductDetail />} />
-      <Route path="/contact" element={<Contact />} />
-      <Route path="/login" element={<Login />} />
-      <Route path="/register-seller" element={<RegisterSeller />} />
+      <Route element={<AppLayout />}>
+        <Route path="/" element={<Home />} />
+        <Route path="/products/:id" element={<ProductDetail />} />
+        <Route path="/contact" element={<Contact />} />
+        <Route path="/category/:slugOrId" element={<CategoryPage />} /> {/* ← ini */}
+      </Route>
+        <Route path="/login" element={<Login />} />
+        <Route path="/register-seller" element={<RegisterSeller />} />
 
       {/* SELLER (Dashboard berisi <Outlet />) */}
       <Route path="/seller" element={<SellerDashboard />}>

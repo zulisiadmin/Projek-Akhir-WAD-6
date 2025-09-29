@@ -3,6 +3,7 @@
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Api\ProductController;
+use App\Http\Controllers\CategoryController;
 
 
 /*
@@ -33,6 +34,22 @@ Route::middleware('auth:sanctum')->group(function () {
 Route::middleware('auth:sanctum')->get('/user', function (Illuminate\Http\Request $r) {
     return $r->user();
 });
+
+Route::get('/categories', function () {
+    // simple list tanpa paginator
+    return Category::select('id','name','slug','icon','parent_id')
+        ->orderBy('name','asc')
+        ->get();
+});
+
+// ATAU jika pakai paginator:
+Route::get('/categories-paged', function () {
+    return Category::select('id','name','slug','icon','parent_id')
+        ->orderBy('name','asc')
+        ->paginate(50);
+});
+
+Route::get('/categories', [CategoryController::class, 'index']);
 
 // penting: route auth breeze (api/login, api/register, dll)
 require __DIR__.'/auth.php';

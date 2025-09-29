@@ -27,15 +27,68 @@ export default function Login() {
   };
 
   return (
-    // cegah submit default: action kosong + onSubmit prevent
-    <form action="#" onSubmit={(e) => e.preventDefault()} style={{ maxWidth: 360, margin: '40px auto', display: 'grid', gap: 12 }}>
-      <h1>Login</h1>
-      <input name="email" type="email" placeholder="Email" value={form.email} onChange={onChange} required />
-      <input name="password" type="password" placeholder="Password" value={form.password} onChange={onChange} required />
-      {err && <div style={{color:'#b91c1c'}}>{err}</div>}
+    <div className="py-5 rs">
+      <div className="row g-4 align-items-stretch">
 
-      {/* BUKAN type="submit" supaya tidak ada GET default */}
-      <button type="button" onClick={handleLogin}>Masuk</button>
-    </form>
+        {/* KIRI: gambar (sembunyikan di layar kecil) */}
+        <div className="col-lg-7 d-none d-lg-block">
+          <div className="h-100 rounded overflow-hidden border">
+            <img
+              src="register-hero.png" // ganti sesuai lokasi gambar kamu
+              alt="Register Illustration"
+              className="img-fluid h-100 w-100 object-fit-cover"
+            />
+          </div>
+        </div>
+
+        {/* KANAN: form */}
+        <div className="col-lg-5">
+          <div className="card shadow-sm h-100">
+            <div className="card-body p-4 p-md-5 my-auto">
+              <h1 className="h3 fw-bold mb-1">Masuk</h1>
+              <p className="text-secondary mb-4">Enter your details below</p>
+
+              <form action="#" onSubmit={(e) => e.preventDefault()}>
+                <div className="mb-3 text-start">
+                  <label className="form-label">Email or Phone Number</label>
+                  <input
+                    name="email"
+                    type="email"
+                    value={form.email} onChange={onChange} required
+                    className={`form-control`}
+                    placeholder="you@example.com"
+                  />
+                </div>
+
+                <div className="mb-3 text-start">
+                  <label className="form-label">Password</label>
+                  <input
+                    name="password"
+                    type="password"
+                    value={form.password} onChange={onChange} required
+                    className={`form-control`}
+                    placeholder="••••••••"
+                  />
+                </div>
+                  {err && <div style={{color:'#b91c1c'}}>{err}</div>}
+
+                <div className="d-grid gap-2">
+                  <button
+                    type="button"
+                    className="btn btn-danger fw-semibold"
+                    onClick={handleLogin}
+                  > Masuk
+                  </button>
+                </div>
+                                <div className="text-center mt-3">
+                  <small className="text-secondary me-1">Already have account?</small>
+                </div>
+              </form>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
   );
 }
