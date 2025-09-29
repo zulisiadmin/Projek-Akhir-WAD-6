@@ -1,6 +1,6 @@
 // App.tsx
 import { Routes, Route, Navigate } from 'react-router-dom';
-import AppLayout from './layouts/AppLayout';
+import AppLayout from './layouts/Applayout';
 import Home from './pages/Home';
 import ProductDetail from './pages/ProductDetail';
 import Contact from './pages/Contact';

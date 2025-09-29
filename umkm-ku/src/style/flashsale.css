@@ -1,0 +1,8 @@
+/* Hilangkan scrollbar di semua browser */
+.hide-scrollbar {
+  -ms-overflow-style: none;  /* IE dan Edge */
+  scrollbar-width: none;     /* Firefox */
+}
+.hide-scrollbar::-webkit-scrollbar {
+  display: none;             /* Chrome, Safari */
+}
