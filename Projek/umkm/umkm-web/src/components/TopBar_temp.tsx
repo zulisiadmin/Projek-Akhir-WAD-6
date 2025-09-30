@@ -9,9 +9,6 @@ type TopBarProps = {
 };
 
 export default function TopBar({
-  promoText = 'Summer Sale for All Swim Suits And Free Express Delivery – OFF 50%!',
-  langLabel = 'English',
-  showPromo = true,
   onSearchSubmit,
 }: TopBarProps) {
   const [q, setQ] = useState('');
@@ -25,18 +22,6 @@ export default function TopBar({
 
   return (
     <>
-      {/* TOP PROMO BAR */}
-      {showPromo && (
-        <div className="promo">
-          <div className="container promo__wrap">
-            <span>{promoText}</span>
-            <Link to="#" className="promo__cta">ShopNow</Link>
-            <div className="promo__lang">
-              <span>{langLabel} <i className="bi bi-caret-down-fill" /></span>
-            </div>
-          </div>
-        </div>
-      )}
 
       {/* NAVBAR */}
       <header className="nav mx-auto">

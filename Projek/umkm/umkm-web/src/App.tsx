@@ -1,5 +1,6 @@
 // App.tsx
 import { Routes, Route, Navigate } from 'react-router-dom';
+import React, { Suspense, lazy } from "react";
 import AppLayout from './layouts/Applayout';
 import Home from './pages/Home';
 import ProductDetail from './pages/ProductDetail';
@@ -8,6 +9,7 @@ import Login from './pages/auth/Login';
 import RegisterSeller from './pages/auth/RegisterSeller';
 import SellerDashboard from './pages/seller/Dashboard';
 import CategoryPage from './pages/CategoryPage';
+import About from './pages/About';
 import './App.css';
 
 export default function App() {
@@ -18,6 +20,7 @@ export default function App() {
         <Route path="/" element={<Home />} />
         <Route path="/products/:id" element={<ProductDetail />} />
         <Route path="/contact" element={<Contact />} />
+        <Route path="/about" element={<About />} />
         <Route path="/category/:slugOrId" element={<CategoryPage />} /> {/* ← ini */}
       </Route>
         <Route path="/login" element={<Login />} />

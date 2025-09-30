@@ -2,7 +2,6 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { publicApi } from '../services/api';
-import bannerImg from '../assets/banner/banner.png'; // dari src/pages ke src/assets
 
 // ===== Types =====
 type Category = {
@@ -174,21 +173,85 @@ export default function Home() {
 
 
           {/* Banner full image */}
-          <div className="banner">
-            <button className="chev-btn chev-left" aria-label="Prev">
-              <i className="bi bi-chevron-left" />
-            </button>
+          <div className="hero-banner banner mt-4">
+            <div
+              id="carouselExampleIndicators"
+              className="carousel slide"
+              data-bs-ride="carousel"
+            >
+              <div className="carousel-indicators">
+                <button
+                  type="button"
+                  data-bs-target="#carouselExampleIndicators"
+                  data-bs-slide-to="0"
+                  className="active"
+                  aria-current="true"
+                  aria-label="Slide 1"
+                ></button>
+                <button
+                  type="button"
+                  data-bs-target="#carouselExampleIndicators"
+                  data-bs-slide-to="1"
+                  aria-label="Slide 2"
+                ></button>
+                <button
+                  type="button"
+                  data-bs-target="#carouselExampleIndicators"
+                  data-bs-slide-to="2"
+                  aria-label="Slide 3"
+                ></button>
+              </div>
 
-            <img
-              className="banner__img--full"
-              src={bannerImg}
-              alt="Promo iPhone 14"
-              loading="lazy"
-            />
+              <div className="carousel-inner">
+                <div className="carousel-item active">
+                  <img
+                    src="/banner.png"
+                    className="d-block w-100"
+                    alt="Banner 1"
+                  />
+                </div>
+                <div className="carousel-item">
+                  <img
+                    src="banner_custom1.png"
+                    className="d-block w-100"
+                    alt="Banner 2"
+                  />
+                </div>
+                <div className="carousel-item">
+                  <img
+                    src="banner_just-foryou.png"
+                    className="d-block w-100"
+                    alt="Banner 3"
+                  />
+                </div>
+              </div>
 
-            <button className="chev-btn chev-right" aria-label="Next">
-              <i className="bi bi-chevron-right" />
-            </button>
+              <button
+                className="carousel-control-prev"
+                type="button"
+                data-bs-target="#carouselExampleIndicators"
+                data-bs-slide="prev"
+              >
+                <span
+                  className="carousel-control-prev-icon"
+                  aria-hidden="true"
+                ></span>
+                <span className="visually-hidden">Previous</span>
+              </button>
+
+              <button
+                className="carousel-control-next"
+                type="button"
+                data-bs-target="#carouselExampleIndicators"
+                data-bs-slide="next"
+              >
+                <span
+                  className="carousel-control-next-icon"
+                  aria-hidden="true"
+                ></span>
+                <span className="visually-hidden">Next</span>
+              </button>
+            </div>
           </div>
         </div>
       </section>
@@ -290,7 +353,7 @@ export default function Home() {
             <div className="chk__summary">
               <strong>{totalItems}</strong> item · <strong>{currency(totalPrice)}</strong>
             </div>
-            <Link to="/cart" className="btn btn-danger btn-lg">Checkout</Link>
+            <Link to="/checkout" className="btn btn-danger btn-lg">Checkout</Link>
           </div>
         </div>
       )}
