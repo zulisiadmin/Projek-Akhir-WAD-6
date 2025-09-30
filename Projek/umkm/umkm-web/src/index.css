@@ -11,21 +11,24 @@
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  --line:#edf1f5;
+  --text:#0f172a;
+  --muted:#64748b;
+  --accent:#ef4444;
+  --warning:#f59e0b;
+
 }
 
 a {
   font-weight: 500;
   color: #646cff;
-  text-decoration: inherit;
+  text-decoration: none;
 }
 a:hover {
   color: #535bf2;
 }
 
 body {
-  margin: 0;
-  display: flex;
-  place-items: center;
   min-width: 320px;
   min-height: 100vh;
 }
@@ -66,3 +69,334 @@ button:focus-visible {
     background-color: #f9f9f9;
   }
 }
+
+/* SECTION HEADER */
+.products{padding:100px 0 32px;background:#fff;color:var(--text); width:90%; margin: 0 auto;}
+.muted{color:var(--muted)}
+.text-warning{color:var(--warning)!important}
+
+.prod__head{position:relative;display:grid;gap:6px;margin-bottom:14px}
+.prod__eyebrow{color:var(--accent);font-weight:700;display:inline-flex;align-items:center;gap:8px}
+.prod__eyebrow .dot{width:20px;height:40px;background:var(--accent);border-radius:5px;display:inline-block}
+.prod__title{margin:0 0 50px;font-size:28px;letter-spacing:.2px; text-align: start;}
+.prod__nav{position:absolute;right:16px;top:0;display:flex;gap:10px}
+.navbtn{width:34px;height:34px;border:1px solid #e5e7eb;border-radius:999px;background:#fff;display:grid;place-items:center}
+.navbtn:hover{background:#f9fafb}
+
+/* GRID */
+.grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:18px;list-style:none;margin:0;padding:0}
+@media (max-width:1024px){.grid{grid-template-columns:repeat(3,minmax(0,1fr))}}
+@media (max-width:720px){.grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+
+/* CARD */
+.card{border:1px solid var(--line);border-radius:12px;background:#fff;padding:10px;display:grid;gap:8px;text-decoration:none;color:inherit}
+.card__imgwrap{position:relative;overflow:hidden;border-radius:8px;background:#f3f4f6}
+.card__img{
+  width:100%;
+  height:180px;
+  object-fit:cover;
+  display:block;
+}
+.card__placeholder{height:180px;display:grid;place-items:center;color:#94a3b8;font-size:12px}
+
+.card__actions{position:absolute;right:8px;top:8px;display:grid;gap:8px;z-index:2}
+.btn-love {
+  padding: 0;
+}
+.iconbtn{width:34px;height:34px;border-radius:999px;border:1px solid #e5e7eb;background:#fff;display:grid;place-items:center;color:#0f172a}
+.iconbtn:hover{background:#f3f4f6}
+
+.addbtn{position:absolute;left:8px;right:8px;bottom:8px;height:42px;border:none;border-radius:8px;background:#111827;color:#fff;font-weight:700;display:none;align-items:center;justify-content:center;gap:8px;z-index:2;cursor:pointer}
+.card__imgwrap:hover .addbtn{display:flex}
+
+.badge{position:absolute;left:8px;top:8px;background:#10b981;color:#fff;font-size:11px;font-weight:700;padding:4px 8px;border-radius:999px;z-index:2}
+
+.card__name{color:#0f172a;font-weight:600;line-height:1.3;}
+.card__name:hover{text-decoration:underline}
+
+.card__price{display:flex;gap:8px;align-items:baseline}
+.card__price .sale{color:var(--accent);font-weight:800}
+.card__price .strike{color:#9ca3af;text-decoration:line-through}
+
+.card__rating{display:flex;align-items:center;gap:6px}
+.stars .bi{margin-right:2px}
+
+.prod__cta{display:grid;place-items:center;margin-top:18px}
+.viewall{background:var(--accent);color:#fff;border-radius:8px;padding:10px 16px;font-weight:700;display:inline-block;text-decoration:none}
+.viewall:hover{filter:brightness(.95)}
+
+/* kontrol qty menggantikan addbtn */
+.qtybar{
+  position:absolute; left:8px; right:8px; bottom:8px; height:42px;
+  display:flex; align-items:center; justify-content:space-between;
+  background:#111827; color:#fff; border-radius:8px; padding:0 8px; gap:8px;
+}
+.qtybtn{
+  width:36px; height:34px; border:1px solid #e5e7eb; border-radius:8px;
+  background:#fff; display:grid; place-items:center; color:#111827;
+  padding: 0 0;
+}
+.qty{ min-width:40px; text-align:center; font-weight:700; }
+
+.btn-love.active, .btn-love.loved{ color:#ef4444; } /* opsional: kalau nanti di-toggle */
+
+.checkout-sticky{
+  position:fixed; left:0; right:0; bottom:0; background:#fff; border-top:1px solid #e5e7eb;
+  padding:10px 0; z-index:50;
+  box-shadow: 0 -6px 12px rgba(0,0,0,.06);
+}
+.chk__wrap{ display:flex; align-items:center; justify-content:space-between; gap:12px; }
+.chk__summary{ font-size:16px; }
+
+/* ===== Register Seller (Bootstrap-friendly) ===== */
+.rs {
+  --rs-accent: #ef4444;   /* merah tombol utama */
+  --rs-line:   #dee2e6;   /* garis input */
+  --rs-muted:  #6c757d;   /* teks sekunder */
+  --rs-text:   #0f172a;   /* teks utama */
+}
+
+/* lebar container seperti mockup */
+.rs .container {
+  max-width: 1100px;
+}
+
+/* gambar kiri full cover (kalau utility object-fit-cover belum ada) */
+.rs .object-fit-cover { object-fit: cover; }
+
+/* Card form lebih rounded & halus */
+.rs .card {
+  border-radius: 12px;
+  border: none;
+}
+
+.rs .card-body {
+  display: block;
+  flex: none !important;
+}
+
+/* Judul & subjudul */
+.rs .card .h3.fw-bold { font-weight: 800 !important; font-size: 1.75rem; }
+.rs .card .text-secondary { color: var(--rs-muted) !important; }
+
+/* Label kecil dan rapi */
+.rs .form-label {
+  font-size: .875rem;
+  color: var(--rs-muted);
+  margin-bottom: .25rem;
+}
+
+/* Input gaya "underline" sesuai mockup */
+.rs .form-control {
+  border: 0;
+  border-bottom: 1px solid var(--rs-line);
+  border-radius: 0;
+  padding-left: 0;
+  padding-right: 0;
+}
+.rs .form-control:focus {
+  box-shadow: none;
+  border-bottom-color: #adb5bd;
+}
+
+/* Placeholder sedikit pudar */
+.rs .form-control::placeholder {
+  color: #adb5bd;
+}
+
+/* Error text kecil */
+.rs .invalid-feedback {
+  font-size: .75rem;
+}
+
+/* Tinggi tombol konsisten */
+.rs .d-grid .btn {
+  height: 46px;
+}
+
+/* Tombol utama merah (sesuai desain) */
+.rs .btn-danger {
+  background-color: var(--rs-accent);
+  border-color: var(--rs-accent);
+  font-weight: 600;
+}
+.rs .btn-danger:hover {
+  filter: brightness(.95);
+}
+
+/* Tombol Google: garis tipis & warna teks gelap */
+.rs .btn-outline-secondary {
+  border-color: #e5e7eb;
+  color: var(--rs-text);
+  background-color: #fff;
+  font-weight: 600;
+}
+.rs .btn-outline-secondary:hover {
+  background-color: #f8f9fa;
+  border-color: #e5e7eb;
+}
+
+/* Alert error lebih ringkas */
+.rs .alert {
+  padding: .5rem .75rem;
+  margin-bottom: .5rem;
+}
+
+/* Footer login kecil & rapi */
+.rs .form-text,
+.rs small {
+  color: var(--rs-muted) !important;
+}
+.rs a.text-decoration-none.fw-semibold:hover {
+  text-decoration: underline !important;
+}
+:root{
+  --line:#e9eef5;
+  --text:#0f172a;
+  --muted:#64748b;
+  --brand:#111827;
+}
+
+a {
+text-decoration: none !important}
+/* promo bar */
+.promo{background:#0f0f0f;color:#fff;font-size:13px}
+.promo__wrap{display:grid;grid-template-columns:1fr auto auto;gap:16px;padding:8px 0;align-items:center}
+.promo__cta{font-weight:700;text-decoration:none}
+.promo__lang{justify-self:end;opacity:.9}
+
+/* nav */
+.nav{border-bottom:1px solid var(--line);background:#fff;position:sticky;top:0;z-index:40;}
+.nav__wrap{display:grid;grid-template-columns:auto 1fr auto;gap:16px;align-items:center;height:64px;width:90%;}
+.brand{
+  height: 100%;
+  width: 150px;
+  align-items: center;
+}
+
+.brand img {
+  padding: 10px 0;
+  height: auto;
+  width: 150px;
+}
+
+.nav__links{display:flex;gap:20px;justify-content:center}
+.nav__links a{padding:8px 10px;color:var(--text)}
+.nav__links a.active{border-bottom:2px solid #111;color:#111}
+
+.nav__right{display:flex;gap:10px;align-items:center}
+.search{position:relative}
+.search input{
+  width:280px;height:36px;border:1px solid var(--line);border-radius:8px;padding:0 36px 0 12px;background:#f8fafc;
+  color:grey;
+}
+.search .icon{position:absolute;right:0px;top:50%;transform:translateY(-50%);opacity:.6; border-radius: 0 5px 5px 0; font-size: 12.5px;}
+.icon-btn{width:36px;height:36px;border:1px solid var(--line);border-radius:8px;display:grid;place-items:center}
+
+/* ===== Product Detail ===== */
+.pd{padding:16px 0;color:#0f172a}
+.pd .container{max-width:1100px;margin:0 auto;padding:0 16px}
+
+/* grid utama: kolom thumbnail | gambar besar | info */
+.pd-grid{
+  display:grid;
+  grid-template-columns: 112px minmax(360px,1fr) 1fr;
+  gap:24px;
+}
+@media (max-width: 960px){
+  .pd-grid{grid-template-columns: 1fr;gap:16px}
+}
+
+/* breadcrumbs (opsional) */
+.pd-breadcrumb{font-size:12px;color:#64748b;margin-bottom:8px}
+.pd-breadcrumb a{color:inherit;text-decoration:none}
+.pd-breadcrumb a:hover{text-decoration:underline}
+
+/* thumbs di kiri */
+.pd-thumbs{display:block;gap:16px}
+.pd-thumb{
+  width:100%; aspect-ratio:1/1; border:1px solid #e5e7eb; border-radius:8px;
+  background:#fff; display:grid; place-items:center; cursor:pointer;
+}
+.pd-thumb img{max-width:100%;max-height:100%;object-fit:contain;border-radius:8px}
+.pd-thumb.active{outline:2px solid #0ea5e9}
+
+/* gambar utama */
+.pd-mainimg{
+  background:#fff;border-radius:10px;display:grid;place-items:center;
+  min-height:400px;
+  overflow: hidden;
+  position: relative;
+}
+.pd-mainimg img{width:100%;height:400px;object-fit:cover;border-radius:10px}
+
+/* panel info kanan */
+.pd-info{display:grid;gap:12px}
+.pd-title{margin:0;font-size:22px;font-weight:800}
+.pd-rating{display:flex;align-items:center;gap:8px;color:#64748b;font-size:13px}
+.pd-rating .stars{color:#f59e0b}
+.pd-stock{color:#16a34a;font-size:13px}
+
+/* harga */
+.pd-price{font-size:28px;font-weight:800;margin:.25rem 0}
+
+/* deskripsi ringkas */
+.pd-desc{color:#64748b;line-height:1.6;border-bottom:1px solid #e5e7eb;padding-bottom:12px}
+
+/* opsi warna & size */
+.pd-opt{display:grid;gap:8px;margin-top:6px}
+.pd-opt .label{font-weight:600;font-size:14px}
+.pd-colors{display:flex;gap:10px}
+.pd-color{
+  width:18px;height:18px;border-radius:999px;border:2px solid #e5e7eb;cursor:pointer
+}
+.pd-color.active{outline:2px solid #111827}
+
+.pd-sizes{display:flex;gap:8px;flex-wrap:wrap}
+.pd-size{
+  height:36px;min-width:42px;padding:0 10px;border:1px solid #e5e7eb;border-radius:6px;
+  background:#fff;cursor:pointer;font-weight:600;font-size:13px
+}
+.pd-size.active{border-color:#111827;background:#111827;color:#fff}
+
+/* qty & tombol aksi */
+.pd-actions{display:flex;align-items:center;gap:12px;margin-top:6px}
+.pd-qty{
+  display:flex;align-items:center;gap:8px;border:1px solid #e5e7eb;border-radius:6px;height:40px;padding:0 8px;background:#fff
+}
+.pd-qtybtn{
+  width:32px;height:32px;border:1px solid #e5e7eb;border-radius:6px;background:#fff;
+  display:grid;place-items:center;cursor:pointer;
+  padding: 0 0;
+  color: red;
+}
+.pd-qtynum{min-width:28px;text-align:center;font-weight:700}
+
+.btn-buy{
+  height:40px;padding:0 16px;border:none;border-radius:6px;background:#ef4444;color:#fff;
+  font-weight:700;cursor:pointer
+}
+.btn-like{
+  width:40px;height:40px;border:1px solid #e5e7eb;border-radius:6px;
+  background:#fff;display:grid;place-items:center;cursor:pointer;
+  padding: 0 0;
+  color: red;
+}
+
+/* kartu info pengiriman */
+.pd-features{display:grid;gap:12px;margin-top:8px}
+.pd-feature{
+  border:1px solid #e5e7eb;border-radius:8px;overflow:hidden;background:#fff
+}
+.pd-feature + .pd-feature{}
+.pd-feature__row{
+  display:flex;gap:12px;align-items:flex-start;padding:14px
+}
+.pd-feature__row + .pd-feature__row{border-top:1px solid #e5e7eb}
+.pd-feature .ico{
+  width:24px;height:24px;border-radius:999px;display:grid;place-items:center;
+  border:1px solid #e5e7eb;color:#111827
+}
+.pd-feature .title{font-weight:700}
+.pd-feature .sub{font-size:12px;color:#64748b}
+.pd-feature a{font-size:12px}

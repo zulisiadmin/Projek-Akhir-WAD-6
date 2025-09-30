@@ -12,7 +12,6 @@ import AccountManagement from './section/AccountManagement'
 import NotFound from './pages/NotFound'
 import Layout from './layout/Layout'
 
-
 function App() {
   
 

@@ -5,8 +5,10 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Http\Resources\ProductResource;
 use App\Models\Product;
+use App\Models\Vendor;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
+use Illuminate\Support\Str;
 
 class ProductController extends Controller
 {
@@ -15,8 +17,8 @@ class ProductController extends Controller
         $perPage   = (int) $request->integer('per_page', 12);
         $search    = $request->string('q')->toString();
         $vendorId  = $request->integer('vendor_id');
-        $category  = $request->string('category')->toString(); // id atau slug
-        $sort      = $request->string('sort', 'newest')->toString(); // newest|price_asc|price_desc
+        $category  = $request->string('category')->toString();
+        $sort      = $request->string('sort', 'newest')->toString();
 
         $query = Product::query()
             ->with(['images', 'variants'])
@@ -44,7 +46,6 @@ class ProductController extends Controller
             })->with('categories:id,name,slug');
         }
 
-        // sorting
         $query->when($sort === 'price_asc', fn($q) => $q->orderBy('base_price', 'asc'))
               ->when($sort === 'price_desc', fn($q) => $q->orderBy('base_price', 'desc'))
               ->when($sort === 'newest', fn($q) => $q->orderBy('created_at', 'desc'));
@@ -66,11 +67,15 @@ class ProductController extends Controller
 
         return ProductResource::make($product);
     }
+
     public function store(Request $request)
     {
         $user = $request->user();
-        abort_unless($user->role === 'seller', 403);
 
+        // 1) role harus 'seller' (bukan 'vendor')
+        abort_unless($user && $user->role === 'seller', 403, 'Hanya penjual yang boleh menambah produk.');
+
+        // 2) validasi data
         $data = $request->validate([
             'name'        => 'required|string|max:255',
             'slug'        => 'nullable|string|max:255|unique:products,slug',
@@ -79,15 +84,24 @@ class ProductController extends Controller
             'stock'       => 'nullable|integer|min:0',
         ]);
 
-        // ambil vendor milik user
-        $vendorId = \App\Models\Vendor::where('user_id', $user->id)->value('id');
+        // 3) ambil vendor milik user dari kolom 'owner_id' (bukan 'user_id')
+        $vendorId = Vendor::where('owner_id', $user->id)->value('id');
         abort_unless($vendorId, 422, 'Vendor tidak ditemukan untuk user ini.');
+
+        // 4) generate slug jika kosong
+        if (empty($data['slug'])) {
+            $base = Str::slug($data['name']);
+            $slug = $base; $i = 1;
+            while (Product::where('slug', $slug)->exists()) {
+                $slug = $base.'-'.$i++;
+            }
+            $data['slug'] = $slug;
+        }
 
         $data['vendor_id'] = $vendorId;
 
-        $product = \App\Models\Product::create($data);
+        $product = Product::create($data);
 
         return response()->json(['data' => $product], 201);
     }
-
 }
