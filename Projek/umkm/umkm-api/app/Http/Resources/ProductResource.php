@@ -22,7 +22,7 @@ class ProductResource extends JsonResource
             'has_variants'  => (bool) $this->has_variants,
             'stock'         => $this->stock,
             'max_per_order' => $this->max_per_order,
-            'image_url'     => $primaryImage,
+            'image_url'     => $this->primary_image_url,
             'images'        => $this->images->map(fn($img) => [
                 'url' => $img->url,
                 'is_primary' => (bool) $img->is_primary,

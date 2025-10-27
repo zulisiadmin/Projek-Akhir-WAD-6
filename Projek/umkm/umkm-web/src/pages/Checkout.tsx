@@ -1,336 +1,408 @@
 // src/pages/Checkout.tsx
-import React, { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { useNavigate } from "react-router-dom";
 
-type CartItem = { id: number; name: string; price: number; qty: number; image?: string };
+/* ================= ENV & helpers ================ */
+const API_BASE =
+  (import.meta as any)?.env?.VITE_API_BASE_URL ||
+  (import.meta as any)?.env?.VITE_BASE_API_URL ||
+  (import.meta as any)?.env?.VITE_API_URL ||
+  "";
+
+const LOCATION_URL = `${API_BASE}/api/campus-locations`;
 
 const currency = (n: number) =>
-  new Intl.NumberFormat("id-ID", { style: "currency", currency: "IDR" }).format(n);
+  new Intl.NumberFormat("id-ID", { style: "currency", currency: "IDR" }).format(n || 0);
 
-const FACULTIES = [
-  "Fakultas Ekonomi & Bisnis",
-  "Fakultas Ilmu Komputer",
-  "Fakultas Teknik",
-  "Fakultas Keguruan & Ilmu Pendidikan",
-  "Fakultas Hukum",
+/* ================ Types ================== */
+type CartItem = { product_id:number; name:string; price:number; qty:number; image_url?:string|null };
+type CampusLocation = { id:number; name:string; code?:string };
+
+/* ================ Cart (anti-flicker) ================ */
+function loadCartMap(): Record<number, CartItem> {
+  const keys = ["cart:v1", "cart"];
+  for (const k of keys) {
+    try {
+      const raw = localStorage.getItem(k);
+      if (!raw) continue;
+      const obj = JSON.parse(raw);
+      if (obj && typeof obj === "object") return obj as Record<number, CartItem>;
+    } catch {}
+  }
+  return {};
+}
+
+/* ================ Parser & extractor ================= */
+function extractLocations(payload: any): CampusLocation[] {
+  if (typeof payload === "string") {
+    try { payload = JSON.parse(payload); } catch { return []; }
+  }
+  const list = Array.isArray(payload?.data) ? payload.data
+             : Array.isArray(payload) ? payload
+             : [];
+  return list
+    .map((x: any) => ({
+      id: Number(x?.id),
+      name: String(x?.name ?? x?.nama ?? x?.lokasi ?? x?.nama_lokasi ?? "").trim(),
+      code: x?.code ?? x?.kode ?? undefined,
+    }))
+    .filter((v) => v.id && v.name);
+}
+
+/* ================ Fallback data (agar dropdown tetap jalan) ================ */
+const FALLBACK_LOCATIONS: CampusLocation[] = [
+  { id: 4, name: "Gedung F" },
+  { id: 1, name: "Kantin A" },
+  { id: 2, name: "Kantin B" },
+  { id: 3, name: "Lobi Perpustakaan" },
 ];
 
-const BUILDINGS = [
-  "Rectorate",
-  "BAAK / Koperasi",
-  "Perpustakaan",
-  "FTI A",
-  "FTI B",
-  "Gedung Ekbis",
-  "Asrama Putra",
-  "Asrama Putri",
-];
-
+/* ================ Komponen ================= */
 export default function Checkout() {
-  // --- Dummy cart (ganti dengan state/global cart-mu) ---
-  const [items] = useState<CartItem[]>([
-    { id: 1, name: "Hoodie KAWALA", price: 165000, qty: 1, image: "https://images.unsplash.com/photo-1516826957135-700dedea698c?w=200" },
-    { id: 2, name: "Tumbler Cakrawala", price: 85000, qty: 2, image: "https://images.unsplash.com/photo-1517705008128-361805f42e86?w=200" },
-  ]);
+  const navigate = useNavigate();
 
-  // --- Kupon sederhana ---
-  const [coupon, setCoupon] = useState("");
-  const [couponPct, setCouponPct] = useState(0); // diskon %
+  // Cart
+  const [cart] = useState<Record<number, CartItem>>(() => loadCartMap());
+  const items = useMemo(() => Object.values(cart), [cart]);
 
-  const subtotal = useMemo(
-    () => items.reduce((s, it) => s + it.price * it.qty, 0),
-    [items]
-  );
-  const shipping = 0; // lingkup kampus -> ambil di counter / antar area kampus (gratis)
-  const discount = Math.floor((subtotal * couponPct) / 100);
-  const total = Math.max(0, subtotal + shipping - discount);
+  // Form
+  const [customerName, setCustomerName] = useState("");
+  const [customerPhone, setCustomerPhone] = useState("");
+  const [pickupLocationId, setPickupLocationId] = useState<string>("");
+  const [deliveryMode, setDeliveryMode] = useState<"now" | "schedule">("now");
+  const [scheduleDate, setScheduleDate] = useState("");
+  const [scheduleTime, setScheduleTime] = useState("");
+  const paymentMethod = "qris" as const;
 
-  // --- Form kampus ---
-  const [payMethod, setPayMethod] = useState<"cashier" | "bank_va" | "qris">("cashier");
-  const [savingInfo, setSavingInfo] = useState(true);
+  // Lokasi
+  const [locations, setLocations] = useState<CampusLocation[]>([]);
+  const [locLoading, setLocLoading] = useState(true);
+  const [locErr, setLocErr] = useState<string | null>(null);
+  const [locDbg, setLocDbg] = useState<any>(null);
 
-  const [form, setForm] = useState({
-    role: "Mahasiswa", // Mahasiswa / Dosen / Tendik
-    name: "",
-    campusId: "", // NIM/NIP/NIK Kampus
-    faculty: "",
-    program: "",
-    building: "",
-    room: "",
-    phone: "",
-    email: "",
-    notes: "",
-    pickup: "Ambil di Koperasi/BAAK", // atau "Antar area kampus"
-  });
+  // Ringkasan
+  const subtotal = useMemo(() => items.reduce((s, it) => s + it.qty * (it.price || 0), 0), [items]);
+  const deliveryFee = 0;
+  const total = subtotal + deliveryFee;
 
-  const [errors, setErrors] = useState<Partial<Record<keyof typeof form, string>>>({});
+  // Loader lokasi super-tahan banting
+  async function fetchLocationsStrict() {
+    setLocLoading(true);
+    setLocErr(null);
+    setLocDbg(null);
 
-  const onChange = (
-    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>
-  ) => {
-    const { name, value } = e.target;
-    setForm((f) => ({ ...f, [name]: value }));
-    setErrors((er) => ({ ...er, [name]: undefined }));
-  };
+    const url = `${LOCATION_URL}?_ts=${Date.now()}`;
+    try {
+      const res = await fetch(url, {
+        method: "GET",
+        headers: {
+          Accept: "application/json, text/plain, */*",
+          "Cache-Control": "no-cache",
+          Pragma: "no-cache",
+        },
+        cache: "no-store",
+      });
 
-  const applyCoupon = () => {
-    const code = coupon.trim().toUpperCase();
-    if (code === "KAWALA10") setCouponPct(10);
-    else if (code === "STUDENT5") setCouponPct(5);
-    else setCouponPct(0);
-  };
+      const ct = res.headers.get("content-type") || "";
+      const text = await res.text();
 
-  const validate = () => {
-    const er: typeof errors = {};
-    if (!form.name.trim()) er.name = "Nama wajib diisi.";
-    if (!form.campusId.trim()) er.campusId = "NIM/NIP wajib diisi.";
-    if (!form.faculty.trim()) er.faculty = "Pilih fakultas.";
-    if (!form.program.trim()) er.program = "Isi prodi/jurusan.";
-    if (!form.building.trim()) er.building = "Pilih gedung/lokasi.";
-    if (!form.phone.trim()) er.phone = "Nomor HP wajib diisi.";
-    if (!form.email.trim()) er.email = "Email kampus wajib diisi.";
-    else if (!/@cakrawala\.ac\.id$/i.test(form.email))
-      er.email = "Gunakan email @cakrawala.ac.id";
-    setErrors(er);
-    return Object.keys(er).length === 0;
-  };
+      setLocDbg({
+        url,
+        status: res.status,
+        contentType: ct,
+        rawPreview: text.slice(0, 250),
+      });
 
-  const placeOrder = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!validate()) return;
-    // TODO: kirim ke API order-mu
-    alert(
-      `Pesanan dibuat!\nMetode: ${payMethod}\nTotal: ${currency(total)}\nPickup: ${form.pickup}`
-    );
-  };
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+
+      const low = text.trim().toLowerCase();
+      if (low.startsWith("<!doctype") || low.startsWith("<html")) {
+        throw new Error("Server mengirim HTML (kemungkinan route /api ketelan SPA).");
+      }
+
+      let data: any = {};
+      try {
+        data = JSON.parse(text);
+      } catch {
+        throw new Error("Server tidak mengirim JSON valid.");
+      }
+
+      const arr = extractLocations(data);
+      if (!arr.length) throw new Error("Data lokasi kosong / tidak terbaca.");
+
+      setLocations(arr);
+      setLocErr(null);
+    } catch (e: any) {
+      // fallback supaya dropdown tetap hidup
+      setLocations(FALLBACK_LOCATIONS);
+      setLocErr(e?.message || "Gagal memuat lokasi, gunakan fallback.");
+    } finally {
+      setLocLoading(false);
+    }
+  }
+
+  useEffect(() => {
+    fetchLocationsStrict();
+    window.scrollTo(0, 0);
+  }, []);
+
+  const canSubmit =
+    items.length > 0 &&
+    customerName.trim() &&
+    customerPhone.trim() &&
+    pickupLocationId &&
+    (deliveryMode === "now" || (scheduleDate && scheduleTime));
+
+  async function placeOrder() {
+    if (!canSubmit) return;
+    try {
+      const delivery_time =
+        deliveryMode === "schedule"
+          ? new Date(`${scheduleDate}T${scheduleTime}:00`).toISOString()
+          : null;
+
+      const payload = {
+        customer_name: customerName,
+        customer_phone: customerPhone,
+        pickup_location_id: Number(pickupLocationId),
+        delivery_mode: deliveryMode,
+        delivery_time,
+        payment_method: paymentMethod,
+        items: items.map((i) => ({ product_id: i.product_id, qty: i.qty })),
+      };
+
+      const res = await fetch(`${API_BASE}/api/orders?_ts=${Date.now()}`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Accept: "application/json, text/plain, */*",
+          "Cache-Control": "no-cache",
+          Pragma: "no-cache",
+        },
+        body: JSON.stringify(payload),
+      });
+
+      const text = await res.text();
+      if (!res.ok) {
+        let msg = "Gagal membuat pesanan";
+        try {
+          const j = JSON.parse(text);
+          msg = j?.message || msg;
+        } catch {}
+        alert(msg);
+        return;
+      }
+
+      let data: any = {};
+      try { data = JSON.parse(text); } catch {}
+
+      // Bersihkan cart
+      localStorage.removeItem("cart:v1");
+      localStorage.removeItem("cart");
+
+      // Redirect payment jika ada
+      if (data?.payment_url) {
+        window.location.href = data.payment_url as string;
+        return;
+      }
+
+      // Fallback ke success page
+      const inv = encodeURIComponent(
+        data?.invoice_number || data?.code || String(data?.id || "")
+      );
+      navigate(`/orders/success?invoice=${inv}`);
+    } catch (e: any) {
+      alert(e?.message || "Gagal membuat pesanan");
+    }
+  }
 
   return (
-    <div style={{ maxWidth: 1100, margin: "0 auto", padding: 16 }}>
-      <style>{`
-        .grid {
-          display: grid; gap: 24px; grid-template-columns: 1fr;
-        }
-        @media (min-width: 980px) {
-          .grid { grid-template-columns: 1.3fr 1fr; }
-        }
-        .title { margin: 0 0 18px; font-size: 28px; color: #111827; }
-        .card { border: 1px solid #e5e7eb; border-radius: 14px; background: #fff; padding: 16px; }
-        .row { display: grid; gap: 10px; }
-        .label { font-size: 13px; color: #374151; font-weight: 600; }
-        .input, .select, .textarea {
-          width: 100%; border: 1px solid #cbd5e1; border-radius: 10px; padding: 10px 12px; font: inherit; outline: none; background: #fff;
-        }
-        .input:focus, .select:focus, .textarea:focus { border-color: #6366f1; box-shadow: 0 0 0 3px rgba(99,102,241,.15); }
-        .grid-2 { display: grid; gap: 10px; grid-template-columns: 1fr; }
-        @media (min-width: 680px) { .grid-2 { grid-template-columns: 1fr 1fr; } }
-        .muted { color: #6b7280; font-size: 13px; }
-        .price-row { display: flex; justify-content: space-between; gap: 8px; padding: 8px 0; }
-        .divider { border: 0; border-top: 1px solid #e5e7eb; margin: 8px 0; }
-        .btn {
-          display: inline-flex; align-items: center; justify-content: center;
-          background: #d32f2f; color: #fff; font-weight: 700; border: 0; border-radius: 10px; padding: 12px 16px; cursor: pointer;
-        }
-        .btn-secondary {
-          background: #ef4444; color: #fff; font-weight: 700; border: 0; border-radius: 10px; padding: 10px 14px;
-        }
-        .error { color: #b91c1c; font-size: 12px; }
-        .payopt { display: flex; align-items: center; gap: 10px; margin: 10px 0; }
-        .coupon { display: grid; gap: 10px; grid-template-columns: 1fr auto; }
-        .item { display: grid; grid-template-columns: 52px 1fr auto; gap: 10px; align-items: center; padding: 8px 0; }
-        .item img { width: 52px; height: 52px; object-fit: cover; border-radius: 8px; border: 1px solid #e5e7eb; }
-      `}</style>
+    <div className="checkout container">
+      <style>{styles}</style>
 
-      <div className="muted" style={{ marginBottom: 8 }}>
-        Account / My Account / Cart / <b>Checkout</b>
-      </div>
+      <nav className="breadcrumb">
+        <span>Account</span> / <span>My Account</span> / <span>Product</span> / <span>View Cart</span> /{" "}
+        <strong>CheckOut</strong>
+      </nav>
 
       <div className="grid">
-        {/* Left: Billing Details (Campus scope) */}
-        <section>
-          <h1 className="title">Billing Details</h1>
-          <form className="card" onSubmit={placeOrder}>
-            <div className="grid-2">
-              <div className="row">
-                <label className="label">Peran*</label>
-                <select
-                  className="select"
-                  name="role"
-                  value={form.role}
-                  onChange={onChange}
-                >
-                  <option>Mahasiswa</option>
-                  <option>Dosen</option>
-                  <option>Tendik</option>
-                </select>
-              </div>
-              <div className="row">
-                <label className="label">NIM / NIP*</label>
-                <input
-                  className="input"
-                  name="campusId"
-                  value={form.campusId}
-                  onChange={onChange}
-                  placeholder="Contoh: 21.11.1234"
-                />
-                {errors.campusId && <span className="error">{errors.campusId}</span>}
-              </div>
-            </div>
+        {/* LEFT: Billing */}
+        <section className="left">
+          <h2>Billing Details</h2>
 
-            <div className="row">
-              <label className="label">Nama Lengkap*</label>
-              <input className="input" name="name" value={form.name} onChange={onChange} />
-              {errors.name && <span className="error">{errors.name}</span>}
-            </div>
+          <label className="lbl">Nama Pembeli*</label>
+          <input
+            className="inp"
+            value={customerName}
+            onChange={(e) => setCustomerName(e.target.value)}
+            placeholder="Nama lengkap"
+            autoComplete="name"
+          />
 
-            <div className="grid-2">
-              <div className="row">
-                <label className="label">Fakultas*</label>
-                <select className="select" name="faculty" value={form.faculty} onChange={onChange}>
-                  <option value="">Pilih Fakultas</option>
-                  {FACULTIES.map((f) => (
-                    <option key={f} value={f}>{f}</option>
-                  ))}
-                </select>
-                {errors.faculty && <span className="error">{errors.faculty}</span>}
-              </div>
-
-              <div className="row">
-                <label className="label">Program Studi / Jurusan*</label>
-                <input className="input" name="program" value={form.program} onChange={onChange} />
-                {errors.program && <span className="error">{errors.program}</span>}
-              </div>
-            </div>
-
-            <div className="grid-2">
-              <div className="row">
-                <label className="label">Gedung / Lokasi*</label>
-                <select className="select" name="building" value={form.building} onChange={onChange}>
-                  <option value="">Pilih Gedung/Lokasi</option>
-                  {BUILDINGS.map((b) => (
-                    <option key={b} value={b}>{b}</option>
-                  ))}
-                </select>
-                {errors.building && <span className="error">{errors.building}</span>}
-              </div>
-
-              <div className="row">
-                <label className="label">Ruangan / Kamar (opsional)</label>
-                <input className="input" name="room" value={form.room} onChange={onChange} placeholder="Contoh: FTI A-302 / A-Putra 2-14" />
-              </div>
-            </div>
-
-            <div className="grid-2">
-              <div className="row">
-                <label className="label">Nomor HP*</label>
-                <input className="input" name="phone" value={form.phone} onChange={onChange} placeholder="08xxxxxxxxxx" />
-                {errors.phone && <span className="error">{errors.phone}</span>}
-              </div>
-              <div className="row">
-                <label className="label">Email Kampus (@cakrawala.ac.id)*</label>
-                <input className="input" name="email" value={form.email} onChange={onChange} placeholder="nama@cakrawala.ac.id" />
-                {errors.email && <span className="error">{errors.email}</span>}
-              </div>
-            </div>
-
-            <div className="row">
-              <label className="label">Metode Pengambilan*</label>
-              <select className="select" name="pickup" value={form.pickup} onChange={onChange}>
-                <option>Ambil di Koperasi/BAAK</option>
-                <option>Antar area kampus</option>
+          <div className="row2">
+            <div>
+              <label className="lbl">
+                Lokasi Kampus*{" "}
+                {locLoading ? <span className="muted">(memuat…)</span> : locErr ? <span className="errtxt"></span> : null}
+              </label>
+              <select
+                className="inp"
+                value={pickupLocationId}
+                onChange={(e) => setPickupLocationId(e.target.value)}
+                disabled={locLoading}
+              >
+                <option value="">{locLoading ? "Memuat…" : "— Pilih lokasi —"}</option>
+                {locations.map((l) => (
+                  <option key={l.id} value={String(l.id)}>
+                    {l.name}
+                  </option>
+                ))}
               </select>
             </div>
 
-            <div className="row">
-              <label className="label">Catatan (opsional)</label>
-              <textarea className="textarea" rows={4} name="notes" value={form.notes} onChange={onChange} placeholder="Instruksi khusus untuk pengambilan/antar..." />
+            <div>
+              <label className="lbl">No. HP / WhatsApp*</label>
+              <input
+                className="inp"
+                value={customerPhone}
+                onChange={(e) => setCustomerPhone(e.target.value)}
+                placeholder="08xxxxxxxxxx"
+                inputMode="tel"
+                autoComplete="tel"
+              />
             </div>
+          </div>
 
-            <label style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 6 }}>
-              <input type="checkbox" checked={savingInfo} onChange={(e) => setSavingInfo(e.target.checked)} />
-              <span className="muted">Simpan data ini untuk checkout berikutnya</span>
+          <label className="lbl">Pilihan Antar</label>
+          <div className="row2">
+            <label className="radio">
+              <input
+                type="radio"
+                name="deliv"
+                checked={deliveryMode === "now"}
+                onChange={() => setDeliveryMode("now")}
+              />
+              <span> Antar sekarang</span>
             </label>
+            <label className="radio">
+              <input
+                type="radio"
+                name="deliv"
+                checked={deliveryMode === "schedule"}
+                onChange={() => setDeliveryMode("schedule")}
+              />
+              <span> Jadwalkan</span>
+            </label>
+          </div>
 
-            <div style={{ marginTop: 16 }}>
-              <button type="submit" className="btn">Place Order</button>
+          {deliveryMode === "schedule" && (
+            <div className="row2">
+              <div>
+                <label className="lbl">Tanggal</label>
+                <input
+                  type="date"
+                  className="inp"
+                  value={scheduleDate}
+                  onChange={(e) => setScheduleDate(e.target.value)}
+                />
+              </div>
+              <div>
+                <label className="lbl">Jam</label>
+                <input
+                  type="time"
+                  className="inp"
+                  value={scheduleTime}
+                  onChange={(e) => setScheduleTime(e.target.value)}
+                />
+              </div>
             </div>
-          </form>
+          )}
+
+          <label className="lbl">Metode Pembayaran</label>
+          <div className="paybox">
+            <label className="radio">
+              <input type="radio" checked readOnly />
+              <span> QRIS (satu-satunya metode)</span>
+            </label>
+            <div className="qris-icons">
+              <img
+                src="/qris.svg"
+                alt="QRIS"
+                onError={(e) => ((e.currentTarget as HTMLImageElement).style.display = "none")}
+              />
+            </div>
+          </div>
         </section>
 
-        {/* Right: Order Summary */}
-        <aside className="card">
-          <div style={{ display: "grid", gap: 8 }}>
+        {/* RIGHT: Ringkasan */}
+        <aside className="right">
+          <ul className="items">
             {items.map((it) => (
-              <div key={it.id} className="item">
-                <img src={it.image} alt={it.name} />
-                <div>
-                  <div style={{ fontWeight: 600 }}>{it.name}</div>
-                  <div className="muted">x{it.qty}</div>
+              <li className="item" key={it.product_id}>
+                <img
+                  src={it.image_url || "/placeholder.png"}
+                  alt={it.name}
+                  className="thumb"
+                  onError={(e) => ((e.currentTarget as HTMLImageElement).src = "/placeholder.png")}
+                />
+                <div className="name">
+                  {it.name} <span className="muted">× {it.qty}</span>
                 </div>
-                <div style={{ fontWeight: 600 }}>{currency(it.price * it.qty)}</div>
-              </div>
+                <div className="price">{currency(it.price)}</div>
+              </li>
             ))}
+            {items.length === 0 && <li className="item">Keranjang kosong.</li>}
+          </ul>
+
+          <div className="row">
+            <span>Subtotal:</span>
+            <span>{currency(subtotal)}</span>
           </div>
 
-          <hr className="divider" />
-          <div className="price-row"><span>Subtotal:</span><b>{currency(subtotal)}</b></div>
-          <div className="price-row"><span>Shipping:</span><b>Free</b></div>
-          {discount > 0 && (
-            <div className="price-row"><span>Discount:</span><b>-{currency(discount)}</b></div>
-          )}
-          <hr className="divider" />
-          <div className="price-row" style={{ fontSize: 18 }}>
-            <span><b>Total:</b></span><b>{currency(total)}</b>
+          <div className="row">
+            <span>Shipping:</span>
+            <span>{deliveryFee === 0 ? "Free" : currency(deliveryFee)}</span>
           </div>
 
-          <div style={{ marginTop: 14 }}>
-            <div className="payopt">
-              <input
-                type="radio"
-                id="pay-cashier"
-                name="pay"
-                checked={payMethod === "cashier"}
-                onChange={() => setPayMethod("cashier")}
-              />
-              <label htmlFor="pay-cashier">Bayar di Koperasi/BAAK (Cash on Campus)</label>
-            </div>
-            <div className="payopt">
-              <input
-                type="radio"
-                id="pay-bank"
-                name="pay"
-                checked={payMethod === "bank_va"}
-                onChange={() => setPayMethod("bank_va")}
-              />
-              <label htmlFor="pay-bank">Virtual Account Kampus</label>
-            </div>
-            <div className="payopt">
-              <input
-                type="radio"
-                id="pay-qris"
-                name="pay"
-                checked={payMethod === "qris"}
-                onChange={() => setPayMethod("qris")}
-              />
-              <label htmlFor="pay-qris">QRIS Koperasi</label>
-            </div>
+          <div className="row total">
+            <span>Total:</span>
+            <span>{currency(total)}</span>
           </div>
 
-          <div style={{ marginTop: 10 }} className="coupon">
-            <input
-              className="input"
-              placeholder="Coupon Code (mis. KAWALA10)"
-              value={coupon}
-              onChange={(e) => setCoupon(e.target.value)}
-            />
-            <button className="btn-secondary" onClick={applyCoupon} type="button">
-              Apply Coupon
-            </button>
-          </div>
-
-          <div className="muted" style={{ marginTop: 10 }}>
-            *Lingkup kampus: pengambilan di koperasi/BAAK atau antar area kampus (gratis).
-          </div>
+          <button className="btn primary" disabled={!canSubmit} onClick={placeOrder}>
+            Place Order
+          </button>
         </aside>
       </div>
     </div>
   );
 }
+
+/* ================ Minimal CSS ================ */
+const styles = `
+.checkout .container{max-width:1140px;margin:0 auto;padding:24px}
+.breadcrumb{font-size:12px;color:#999;margin-bottom:12px}
+.grid{display:grid;grid-template-columns:1fr 420px;gap:32px}
+.left h2{font-size:32px;margin:8px 0 16px}
+.lbl{display:block;font-size:14px;margin:12px 0 6px}
+.inp{width:100%;padding:12px 14px;border:1px solid #e5e7eb;border-radius:6px;background:#fff;color:#333}
+.row2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.right{border:1px solid #eee;border-radius:10px;padding:16px;align-self:start;background:#fff}
+.items{list-style:none;margin:0;padding:0}
+.item{display:grid;grid-template-columns:56px 1fr auto;gap:12px;align-items:center;padding:8px 0;border-bottom:1px solid #f2f2f2}
+.item:last-child{border-bottom:none}
+.thumb{width:56px;height:56px;object-fit:cover;border-radius:8px;background:#f3f4f6}
+.name{font-size:14px}
+.name .muted{opacity:.6}
+.price{font-weight:600}
+.row{display:flex;justify-content:space-between;align-items:center;margin:8px 0;color:#555}
+.total{font-weight:700;color:#111}
+.radio{display:flex;align-items:center;gap:10px;margin:8px 0}
+.paybox{border:1px dashed #e5e7eb;border-radius:8px;padding:10px 12px;display:flex;justify-content:space-between;align-items:center;background:#fff}
+.qris-icons img{height:24px}
+.btn{padding:12px 16px;border-radius:6px;border:1px solid transparent;cursor:pointer}
+.btn.ghost{border-color:#e5e7eb;background:#fff}
+.btn.primary{background:#dc3545;color:#fff;width:100%;margin-top:12px}
+.errtxt{color:#b91c1c;font-weight:600}
+@media (max-width: 992px){.grid{grid-template-columns:1fr}}
+`;

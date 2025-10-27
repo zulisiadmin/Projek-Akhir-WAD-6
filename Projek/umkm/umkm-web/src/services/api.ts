@@ -8,9 +8,11 @@ export const publicApi = axios.create({
 });
 
 export const authApi = axios.create({
-  baseURL: API_BASE,        // <— TANPA /api di sini
+  baseURL: "http://127.0.0.1:8000",
   withCredentials: true,
 });
+authApi.defaults.headers.common['X-Requested-With'] = 'XMLHttpRequest';
+authApi.defaults.headers.common['Accept'] = 'application/json';
 authApi.defaults.xsrfCookieName = 'XSRF-TOKEN';
 authApi.defaults.xsrfHeaderName = 'X-XSRF-TOKEN';
 

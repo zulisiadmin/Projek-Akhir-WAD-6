@@ -20,9 +20,50 @@ type Product = {
   image_url?: string | null;
 };
 
+type CartItem = {
+  product_id: number;
+  name: string;
+  price: number;
+  qty: number;
+  image_url?: string | null;
+};
+
 // ==== UTIL ====
 function currency(n: number) {
   return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR' }).format(n ?? 0);
+}
+
+const CART_KEY = "cart:v1";
+
+// baca cart dari localStorage -> map product_id -> CartItem
+function loadCartMap(): Record<number, CartItem> {
+  try {
+    const raw = localStorage.getItem(CART_KEY);
+    return raw ? JSON.parse(raw) : {};
+  } catch { return {}; }
+}
+
+// tulis cart ke localStorage (dari state qty + daftar produk)
+function persistCart(
+  qtyMap: Record<number, number>,
+  products: { id:number; name:string; base_price:number; image_url?:string|null }[]
+){
+  const byId = new Map(products.map(p => [p.id, p]));
+  const out: Record<number, CartItem> = {};
+  for (const [idStr, qty] of Object.entries(qtyMap)) {
+    const id = Number(idStr);
+    if (!qty) continue;
+    const p = byId.get(id);
+    if (!p) continue;
+    out[id] = {
+      product_id: id,
+      name: p.name,
+      price: Number(p.base_price ?? 0),
+      qty,
+      image_url: (p as any).image_url ?? null,
+    };
+  }
+  localStorage.setItem(CART_KEY, JSON.stringify(out));
 }
 
 // beberapa path umum untuk kategori (fallback)
@@ -83,7 +124,13 @@ export default function Home() {
   const [prodsErr, setProdsErr] = useState<string | null>(null);
 
   // keranjang: productId -> qty
-  const [cart, setCart] = useState<Record<number, number>>({});
+  const [cart, setCart] = useState<Record<number, number>>(() => {
+    // reconstruct qty map dari localStorage (kalau ada)
+    const saved = loadCartMap();
+    const qtyOnly: Record<number, number> = {};
+    for (const it of Object.values(saved)) qtyOnly[it.product_id] = it.qty;
+    return qtyOnly;
+  });
 
   const qty = (id: number) => cart[id] || 0;
 
@@ -139,6 +186,12 @@ export default function Home() {
     })();
     return () => { cancelled = true; };
   }, []);
+  // setiap cart/prods berubah -> persist
+  useEffect(() => {
+    // pastikan prods sudah terisi dulu agar bisa isi nama/price/image_url
+    if (prods.length > 0) persistCart(cart, prods);
+  }, [cart, prods]);
+
 
   return (
     <>
@@ -278,7 +331,7 @@ export default function Home() {
 
                       {p.image_url
                         ? <img src={p.image_url} alt={p.name} className="card__img" />
-                        : <div className="card__placeholder">No Image</div>
+                        : <img src="/placeholder.png" alt="no image" className="card__img" />
                       }
 
                       <div className="card__actions">

@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Facades\Storage;
 
 class Product extends Model
 {
@@ -11,11 +12,6 @@ class Product extends Model
     public function vendor()
     {
         return $this->belongsTo(Vendor::class);
-    }
-
-    public function images()
-    {
-        return $this->hasMany(ProductImage::class)->orderByDesc('is_primary')->orderBy('sort');
     }
 
     public function variants()
@@ -27,4 +23,18 @@ class Product extends Model
     {
         return $this->belongsToMany(Category::class, 'category_product');
     }
+
+    public function images() {
+        return $this->hasMany(ProductImage::class);
+    }
+
+    public function getPrimaryImageUrlAttribute(): ?string
+    {
+        $img = $this->images
+            ? $this->images->sortByDesc('is_primary')->sortBy('sort')->first()
+            : $this->images()->orderByDesc('is_primary')->orderBy('sort')->first();
+
+        return $img?->full_url;
+    }
+
 }
