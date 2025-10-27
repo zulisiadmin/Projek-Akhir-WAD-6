@@ -122,33 +122,36 @@ function SellerDashboardInner() {
 
   // menu statik (bukan hook)
   const menus = [
-    { to: '/seller',            icon: Icon.dashboard, label: 'Ringkasan' },
-    { to: '/seller/products',   icon: Icon.products,  label: 'Produk' },
-    { to: '/seller/orders',     icon: Icon.orders,    label: 'Pesanan' },
-    { to: '/seller/inventory',  icon: Icon.inventory, label: 'Stok' },
-    { to: '/seller/promotions', icon: Icon.promo,     label: 'Promosi' },
-    { to: '/seller/messages',   icon: Icon.message,   label: 'Pesan' },
-    { to: '/seller/analytics',  icon: Icon.chart,     label: 'Analitik' },
-    { to: '/seller/finance',    icon: Icon.wallet,    label: 'Keuangan' },
-    { to: '/seller/settings',   icon: Icon.settings,  label: 'Pengaturan' },
+    { to: '/sellerdashboard',            icon: Icon.dashboard, label: 'Ringkasan' },
+    { to: '/sellerdashboard/products',   icon: Icon.products,  label: 'Produk' },
+    { to: '/sellerdashboard/orders',     icon: Icon.orders,    label: 'Pesanan' },
+    { to: '/sellerdashboard/inventory',  icon: Icon.inventory, label: 'Stok' },
+    { to: '/sellerdashboard/promotions', icon: Icon.promo,     label: 'Promosi' },
+    { to: '/sellerdashboard/messages',   icon: Icon.message,   label: 'Pesan' },
+    { to: '/sellerdashboard/analytics',  icon: Icon.chart,     label: 'Analitik' },
+    { to: '/sellerdashboard/finance',    icon: Icon.wallet,    label: 'Keuangan' },
+    { to: '/sellerdashboard/settings',   icon: Icon.settings,  label: 'Pengaturan' },
     { to: '/help',              icon: Icon.help,      label: 'Bantuan' },
   ];
 
-  useEffect(() => {
-    let cancelled = false;
-    (async () => {
-      try {
-        const r = await authApi.get<User>('/api/user');
-        if (!cancelled) setMe(r.data);
-      } catch (e: any) {
-        if (!cancelled) {
-          setErr(e?.response?.status ? `Error ${e.response.status}` : 'Network error');
-          setMe(null);
-        }
+useEffect(() => {
+  let cancelled = false;
+  (async () => {
+    try {
+      // ⬅️ tambahkan baris ini
+      await authApi.get('/sanctum/csrf-cookie');
+
+      const r = await authApi.get<User>('/api/user');
+      if (!cancelled) setMe(r.data);
+    } catch (e: any) {
+      if (!cancelled) {
+        setErr(e?.response?.status ? `Error ${e.response.status}` : 'Network error');
+        setMe(null);
       }
-    })();
-    return () => { cancelled = true; };
-  }, []);
+    }
+  })();
+  return () => { cancelled = true; };
+}, []);
 
   const handleLogout = async () => {
     try {
@@ -173,17 +176,11 @@ function SellerDashboardInner() {
       </div>
     );
   }
+
   if (me === null) {
     return (
       <div className="screen">
-        <div className="card error">Harus login sebagai penjual. {err && <span>({err})</span>}</div>
-      </div>
-    );
-  }
-  if (!['seller', 'vendor'].includes(me.role)) {
-    return (
-      <div className="screen">
-        <div className="card error">Akses ditolak: akun Anda bukan penjual/vendor.</div>
+        <div className="card error">Harus login. {err && <span>({err})</span>}</div>
       </div>
     );
   }

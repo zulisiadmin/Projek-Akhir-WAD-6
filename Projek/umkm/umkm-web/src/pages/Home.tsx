@@ -2,7 +2,6 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { publicApi } from '../services/api';
-import bannerImg from '../assets/banner/banner.png'; // dari src/pages ke src/assets
 
 // ===== Types =====
 type Category = {
@@ -21,9 +20,50 @@ type Product = {
   image_url?: string | null;
 };
 
+type CartItem = {
+  product_id: number;
+  name: string;
+  price: number;
+  qty: number;
+  image_url?: string | null;
+};
+
 // ==== UTIL ====
 function currency(n: number) {
   return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR' }).format(n ?? 0);
+}
+
+const CART_KEY = "cart:v1";
+
+// baca cart dari localStorage -> map product_id -> CartItem
+function loadCartMap(): Record<number, CartItem> {
+  try {
+    const raw = localStorage.getItem(CART_KEY);
+    return raw ? JSON.parse(raw) : {};
+  } catch { return {}; }
+}
+
+// tulis cart ke localStorage (dari state qty + daftar produk)
+function persistCart(
+  qtyMap: Record<number, number>,
+  products: { id:number; name:string; base_price:number; image_url?:string|null }[]
+){
+  const byId = new Map(products.map(p => [p.id, p]));
+  const out: Record<number, CartItem> = {};
+  for (const [idStr, qty] of Object.entries(qtyMap)) {
+    const id = Number(idStr);
+    if (!qty) continue;
+    const p = byId.get(id);
+    if (!p) continue;
+    out[id] = {
+      product_id: id,
+      name: p.name,
+      price: Number(p.base_price ?? 0),
+      qty,
+      image_url: (p as any).image_url ?? null,
+    };
+  }
+  localStorage.setItem(CART_KEY, JSON.stringify(out));
 }
 
 // beberapa path umum untuk kategori (fallback)
@@ -84,7 +124,13 @@ export default function Home() {
   const [prodsErr, setProdsErr] = useState<string | null>(null);
 
   // keranjang: productId -> qty
-  const [cart, setCart] = useState<Record<number, number>>({});
+  const [cart, setCart] = useState<Record<number, number>>(() => {
+    // reconstruct qty map dari localStorage (kalau ada)
+    const saved = loadCartMap();
+    const qtyOnly: Record<number, number> = {};
+    for (const it of Object.values(saved)) qtyOnly[it.product_id] = it.qty;
+    return qtyOnly;
+  });
 
   const qty = (id: number) => cart[id] || 0;
 
@@ -140,6 +186,12 @@ export default function Home() {
     })();
     return () => { cancelled = true; };
   }, []);
+  // setiap cart/prods berubah -> persist
+  useEffect(() => {
+    // pastikan prods sudah terisi dulu agar bisa isi nama/price/image_url
+    if (prods.length > 0) persistCart(cart, prods);
+  }, [cart, prods]);
+
 
   return (
     <>
@@ -174,21 +226,85 @@ export default function Home() {
 
 
           {/* Banner full image */}
-          <div className="banner">
-            <button className="chev-btn chev-left" aria-label="Prev">
-              <i className="bi bi-chevron-left" />
-            </button>
+          <div className="hero-banner banner mt-4">
+            <div
+              id="carouselExampleIndicators"
+              className="carousel slide"
+              data-bs-ride="carousel"
+            >
+              <div className="carousel-indicators">
+                <button
+                  type="button"
+                  data-bs-target="#carouselExampleIndicators"
+                  data-bs-slide-to="0"
+                  className="active"
+                  aria-current="true"
+                  aria-label="Slide 1"
+                ></button>
+                <button
+                  type="button"
+                  data-bs-target="#carouselExampleIndicators"
+                  data-bs-slide-to="1"
+                  aria-label="Slide 2"
+                ></button>
+                <button
+                  type="button"
+                  data-bs-target="#carouselExampleIndicators"
+                  data-bs-slide-to="2"
+                  aria-label="Slide 3"
+                ></button>
+              </div>
 
-            <img
-              className="banner__img--full"
-              src={bannerImg}
-              alt="Promo iPhone 14"
-              loading="lazy"
-            />
+              <div className="carousel-inner">
+                <div className="carousel-item active">
+                  <img
+                    src="/banner.png"
+                    className="d-block w-100"
+                    alt="Banner 1"
+                  />
+                </div>
+                <div className="carousel-item">
+                  <img
+                    src="banner_custom1.png"
+                    className="d-block w-100"
+                    alt="Banner 2"
+                  />
+                </div>
+                <div className="carousel-item">
+                  <img
+                    src="banner_just-foryou.png"
+                    className="d-block w-100"
+                    alt="Banner 3"
+                  />
+                </div>
+              </div>
 
-            <button className="chev-btn chev-right" aria-label="Next">
-              <i className="bi bi-chevron-right" />
-            </button>
+              <button
+                className="carousel-control-prev"
+                type="button"
+                data-bs-target="#carouselExampleIndicators"
+                data-bs-slide="prev"
+              >
+                <span
+                  className="carousel-control-prev-icon"
+                  aria-hidden="true"
+                ></span>
+                <span className="visually-hidden">Previous</span>
+              </button>
+
+              <button
+                className="carousel-control-next"
+                type="button"
+                data-bs-target="#carouselExampleIndicators"
+                data-bs-slide="next"
+              >
+                <span
+                  className="carousel-control-next-icon"
+                  aria-hidden="true"
+                ></span>
+                <span className="visually-hidden">Next</span>
+              </button>
+            </div>
           </div>
         </div>
       </section>
@@ -215,7 +331,7 @@ export default function Home() {
 
                       {p.image_url
                         ? <img src={p.image_url} alt={p.name} className="card__img" />
-                        : <div className="card__placeholder">No Image</div>
+                        : <img src="/placeholder.png" alt="no image" className="card__img" />
                       }
 
                       <div className="card__actions">
@@ -290,7 +406,7 @@ export default function Home() {
             <div className="chk__summary">
               <strong>{totalItems}</strong> item · <strong>{currency(totalPrice)}</strong>
             </div>
-            <Link to="/cart" className="btn btn-danger btn-lg">Checkout</Link>
+            <Link to="/checkout" className="btn btn-danger btn-lg">Checkout</Link>
           </div>
         </div>
       )}
