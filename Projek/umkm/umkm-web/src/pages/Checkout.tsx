@@ -46,7 +46,6 @@ function extractLocations(payload: any): CampusLocation[] {
       name: String(x?.name ?? x?.nama ?? x?.lokasi ?? x?.nama_lokasi ?? "").trim(),
       code: x?.code ?? x?.kode ?? undefined,
     }))
-    .filter((v) => v.id && v.name);
 }
 
 /* ================ Fallback data (agar dropdown tetap jalan) ================ */

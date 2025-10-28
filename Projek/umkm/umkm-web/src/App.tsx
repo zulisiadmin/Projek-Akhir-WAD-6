@@ -12,6 +12,7 @@ import CategoryPage from './pages/CategoryPage';
 import About from './pages/About';
 import SellerHello from './pages/SellerHello';
 import SellerProducts from './pages/seller/SellerProducts';
+import Order from './pages/seller/Orders';
 import Checkout from './pages/Checkout';
 import './App.css';
 
@@ -35,7 +36,7 @@ export default function App() {
       <Route path="/sellerdashboard" element={<SellerDashboard />}>
         <Route index element={<div className="card">Ringkasan</div>} />
         <Route path="products" element={<SellerProducts/>} />
-        <Route path="orders" element={<div className="card">Pesanan</div>} />
+        <Route path="orders" element={<Order/>} />
         <Route path="inventory" element={<div className="card">Stok</div>} />
         <Route path="promotions" element={<div className="card">Promosi</div>} />
         <Route path="messages" element={<div className="card">Pesan</div>} />
