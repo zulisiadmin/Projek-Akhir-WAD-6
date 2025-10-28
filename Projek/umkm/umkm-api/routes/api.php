@@ -10,6 +10,7 @@ use App\Http\Controllers\Api\OrderController;
 use Illuminate\Support\Str;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
+use App\Http\Controllers\Api\VendorOrderController;
 
 
 /*
@@ -48,9 +49,13 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/seller/products', [ProductController::class, 'store']);
     Route::put('/seller/products/{id}', [ProductController::class, 'update']);
     Route::delete('/seller/products/{id}', [ProductController::class, 'destroy']);
-     Route::get('/seller/products', [ProductController::class, 'sellerIndex']);
-     Route::get('/categories', function () {
+    Route::get('/seller/products', [ProductController::class, 'sellerIndex']);
+    Route::get('/categories', function () {
     return \App\Models\Category::select('id','name')->orderBy('name')->paginate(100);
+    Route::middleware('auth:sanctum')->group(function () {
+    Route::get('/vendor/orders', [VendorOrderController::class, 'index']);
+    Route::get('/vendor/orders/{order}', [VendorOrderController::class, 'show']);
+    });
 });
 
     // opsional kalau mau dipakai di FE

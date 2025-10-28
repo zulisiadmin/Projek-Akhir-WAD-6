@@ -34,6 +34,9 @@ class OrderController extends Controller
         $productIds = $itemsReq->pluck('product_id')->all();
         $products   = Product::whereIn('id', $productIds)->get()->keyBy('id');
 
+        $firstProduct = $products->first(); // Ambil produk pertama dari koleksi
+        $vendorId = $firstProduct ? $firstProduct->vendor_id : null;
+
         $lines    = [];
         $subtotal = 0;
         foreach ($itemsReq as $it) {
@@ -47,8 +50,8 @@ class OrderController extends Controller
                 'product_id'   => $p->id,
                 'product_name' => $p->name,
                 'qty'          => $qty,
-                'price'        => $price,
-                'line_total'   => $line,
+                'unit_price'        => $price,
+                'total_price'   => $line,
             ];
         }
 
@@ -59,12 +62,12 @@ class OrderController extends Controller
 
         $code = 'ORD-'.now()->format('Ymd').'-'.Str::upper(Str::random(6));
 
-        $order = DB::transaction(function () use ($data, $code, $subtotal, $discountTotal, $deliveryFee, $grandTotal, $lines) {
+        $order = DB::transaction(function () use ($data, $code, $subtotal, $discountTotal, $deliveryFee, $grandTotal, $lines,$vendorId) {
             /** @var Order $order */
             $order = Order::create([
                 'code'               => $code,
                 'user_id'            => auth()->id(),      // opsional (null kalau guest)
-                'vendor_id'          => null,              // isi kalau kamu butuh (ambil dari produk pertama misalnya)
+                'vendor_id'          => $vendorId,              // isi kalau kamu butuh (ambil dari produk pertama misalnya)
                 'customer_name'      => $data['customer_name'],
                 'customer_phone'     => $data['customer_phone'],
                 'pickup_location_id' => $data['pickup_location_id'],
